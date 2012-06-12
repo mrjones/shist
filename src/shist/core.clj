@@ -2,16 +2,29 @@
   (:use compojure.core
         [ring.middleware.params :only [wrap-params]]
         [ring.middleware.keyword-params :only [wrap-keyword-params]])
-  (:require [appengine-magic.core :as ae]))
+  (:require [appengine-magic.core :as ae]
+            [appengine-magic.services.datastore :as ds]))
 
+(ds/defentity KeyValuePair [^:key key, value])
 
 (defroutes shist-app-routes
   (GET "/" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
-        :body "Hello, world! (updated)"})
-  (GET "/test/:id" [id & params]
-       (str "The ID is: " id " and param is: " (params :param)))
+        :body "Hello, world! (updated 4)"})
+  (GET "/store/:key/:value" [key value]
+       (let [kv (KeyValuePair. "foo" value)]
+         (if (nil? kv)
+           (str "wtf")
+           (let []
+             (ds/save! kv)
+             (str "Setting " key " to " value ". P.S. " (:key kv) (:value kv))))))
+  (GET "/lookup/:key" [key] #".*"
+       (let [kv (first (ds/query :kind KeyValuePair :filter (= :key key)))]
+         (if (nil? kv)
+           (str "Couldn't find " key)
+           (str "Looking up " key ". Got " (:value kv)))))
+  (GET "/favicon.ico" [] { :status 404 })
   )
 
 ; Makes GET parameters work in dev-appserver

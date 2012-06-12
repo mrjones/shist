@@ -11,8 +11,11 @@ path/to/appengine-java-sdk/bin/dev_appserver.sh war
 
 # REPL
 (require '[appengine-magic.core :as ae])
-(require '[shist.app_servlet :as app])
-(ae/serve app/shist-app)
+(require '[shist.core :as app])
+(ae/serve app/shist-app :port 8081)
+
+;; Compile in new changes (no need to restart server)
+(compile 'shist.core)
 
 ;; To stop / start
 (ae/stop)
