@@ -4,7 +4,9 @@ FIXME: write description
 
 ## Usage
 
-FIXME: write
+lein deps
+lein appengine-prepare
+path/to/appengine-java-sdk/bin/dev_appserver.sh war 
 
 ## License
 
