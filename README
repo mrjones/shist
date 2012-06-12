@@ -4,9 +4,19 @@ FIXME: write description
 
 ## Usage
 
+# Ahead of time compilation
 lein deps
 lein appengine-prepare
 path/to/appengine-java-sdk/bin/dev_appserver.sh war 
+
+# REPL
+(require '[appengine-magic.core :as ae])
+(require '[shist.app_servlet :as app])
+(ae/serve app/shist-app)
+
+;; To stop / start
+(ae/stop)
+(ae/serve app/shist-app :port 8081)
 
 ## License
 
