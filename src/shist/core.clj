@@ -13,13 +13,12 @@
         :headers {"Content-Type" "text/plain"}
         :body "Hello, world! (updated 4)"})
   (GET "/store/:key/:value" [key value]
+       ; Do a lookup (check for dupes) first
        (let [kv (KeyValuePair. "foo" value)]
-         (if (nil? kv)
-           (str "wtf")
-           (let []
-             (ds/save! kv)
-             (str "Setting " key " to " value ". P.S. " (:key kv) (:value kv))))))
+         (ds/save! kv)
+         (str "Setting " key " to " value ". P.S. " (:key kv) (:value kv))))
   (GET "/lookup/:key" [key] #".*"
+       ; Figure out how to construct a key to make ds/retrieve work
        (let [kv (first (ds/query :kind KeyValuePair :filter (= :key key)))]
          (if (nil? kv)
            (str "Couldn't find " key)
