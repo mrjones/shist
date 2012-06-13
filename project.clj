@@ -7,5 +7,6 @@
                  ]
   :dev-dependencies [
                      [appengine-magic "0.5.0"]
+                     [swank-clojure "1.4.0-SNAPSHOT"]
                      ]
   )

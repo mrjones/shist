@@ -7,6 +7,8 @@
             [appengine-magic.services.datastore :as ds]
             [clj-json.core :as json]))
 
+(ds/defentity KeyValuePair [^:key key, value])
+
 (ds/defentity Command [ ^:key id, command, hostname, timestamp ])
 
 (defn md5
@@ -26,8 +28,7 @@
         :headers {"Content-Type" "text/plain"}
         :body "Hello, world! (updated 4)"})
   ;; Insert a new command into the archive
-  ;; Make this POST-only
-  (ANY "/commands/" [& params]
+  (POST "/commands/" [& params]
        (let [cmd (Command. (md5 (str (:host params) (:ts params)))
                            (:cmd params)
                            (:host params)
@@ -36,13 +37,24 @@
               " host: " (:hostname cmd)
               " cmd: " (:command cmd)
               " id: " (:id cmd))
-;;         (ds/save! cmd)
+         (ds/save! cmd)
          ))
   (GET "/command/:cmdid" [cmdid]
        (let [cmd (ds/retrieve Command cmdid)]
          (if (nil? cmd)
-           {:status 404 :body (str cmdid " not found")}
+           {:status 404 :body (str cmdid " not found sir.")}
            {:status 200 :body (json/generate-string cmd)})))
+;  (GET "/store/:key/:value" [key value]
+;       ; Do a lookup (check for dupes) first
+;       (let [kv (KeyValuePair. "foo" value)]
+;         (ds/save! kv)
+;         (str "Setting " key " to " value ". P.S. " (:key kv) (:value kv))))
+  (GET "/lookup/:key" [key]
+       ; Figure out how to construct a key to make ds/retrieve work
+       (let [kv (first (ds/query :kind KeyValuePair :filter (= :key key)))]
+         (if (nil? kv)
+           (str "Couldn't find " key)
+           (str "Looking up " key ". Got " (:value kv)))))
   (GET "/favicon.ico" [] { :status 404 })
   )
 
