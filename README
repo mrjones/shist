@@ -4,12 +4,8 @@ FIXME: write description
 
 ## Usage
 
-# Ahead of time compilation
-lein deps
-lein appengine-prepare
-path/to/appengine-java-sdk/bin/dev_appserver.sh war 
-
 # REPL
+lein repl
 (require '[appengine-magic.core :as ae])
 (require '[shist.core :as app])
 (ae/serve app/shist-app :port 8081)
@@ -21,8 +17,12 @@ path/to/appengine-java-sdk/bin/dev_appserver.sh war
 (ae/stop)
 (ae/serve app/shist-app :port 8081)
 
-## License
+;; Useful for debugging
+(require '[appengine-magic.services.datastore :as ds])
 
-Copyright (C) 2012 FIXME
 
-Distributed under the Eclipse Public License, the same as Clojure.
+# Ahead of time compilation
+lein deps
+lein appengine-prepare
+path/to/appengine-java-sdk/bin/dev_appserver.sh war 
+
