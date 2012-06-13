@@ -39,6 +39,11 @@
               " cmd: " (:command cmd)
               " id: " (:id cmd))
          ))
+  ;; List all commands
+  (GET "/commands/" []
+       (let [cmds (ds/query :kind Command)]
+         (json/generate-string cmds)))
+  ;; List one command
   (GET "/command/:cmdid" [cmdid]
        (let [cmd (ds/retrieve Command cmdid)]
          (if (nil? cmd)
