@@ -4,7 +4,8 @@
         [ring.middleware.params :only [wrap-params]]
         [ring.middleware.keyword-params :only [wrap-keyword-params]])
   (:require [appengine-magic.core :as ae]
-            [appengine-magic.services.datastore :as ds]))
+            [appengine-magic.services.datastore :as ds]
+            [clj-json.core :as json]))
 
 (ds/defentity KeyValuePair [^:key key, value])
 
@@ -43,7 +44,7 @@
        (let [cmd (ds/retrieve Command cmdid)]
          (if (nil? cmd)
            {:status 404 :body (str cmdid " not found")}
-           {:status 200 :body (:command cmd)})))
+           {:status 200 :body (json/generate-string cmd)})))
   (GET "/store/:key/:value" [key value]
        ; Do a lookup (check for dupes) first
        (let [kv (KeyValuePair. "foo" value)]
