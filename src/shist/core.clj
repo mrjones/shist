@@ -7,7 +7,7 @@
             [appengine-magic.services.datastore :as ds]
             [clj-json.core :as json]))
 
-(ds/defentity KeyValuePair [^:key key, value])
+;(ds/defentity KeyValuePair [^:key key, value])
 
 (ds/defentity Command [ ^:key id, command, hostname, timestamp ])
 
@@ -33,11 +33,11 @@
                            (:cmd params)
                            (:host params)
                            (:ts params))]
+         (ds/save! cmd)
          (str "Timestamp: " (:timestamp cmd)
               " host: " (:hostname cmd)
               " cmd: " (:command cmd)
               " id: " (:id cmd))
-         (ds/save! cmd)
          ))
   (GET "/command/:cmdid" [cmdid]
        (let [cmd (ds/retrieve Command cmdid)]
@@ -49,15 +49,21 @@
 ;       (let [kv (KeyValuePair. "foo" value)]
 ;         (ds/save! kv)
 ;         (str "Setting " key " to " value ". P.S. " (:key kv) (:value kv))))
-  (GET "/lookup/:key" [key]
-       ; Figure out how to construct a key to make ds/retrieve work
-       (let [kv (first (ds/query :kind KeyValuePair :filter (= :key key)))]
-         (if (nil? kv)
-           (str "Couldn't find " key)
-           (str "Looking up " key ". Got " (:value kv)))))
+;  (GET "/lookup/:key" [key]
+;       ; Figure out how to construct a key to make ds/retrieve work
+;       (let [kv (first (ds/query :kind KeyValuePair :filter (= :key key)))]
+;         (if (nil? kv)
+;           (str "Couldn't find " key)
+;           (str "Looking up " key ". Got " (:value kv)))))
   (GET "/favicon.ico" [] { :status 404 })
   )
 
+; Right now you need to make sure the header:
+; Content-Type:application/x-www-form-urlencoded
+; I think we might be able to omit that with something like
+; (defn wrap-correct-content-type [handler]
+;   (fn [request]
+;      (handler (assoc request :content-type "application/json"))))
 
 ; Makes GET parameters work in dev-appserver
 ; https://github.com/gcv/appengine-magic/issues/28
