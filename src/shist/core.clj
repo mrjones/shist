@@ -20,6 +20,9 @@
      (new java.math.BigInteger 1 (.digest hash-bytes)) ; Positive and the size of the number
               16))) ; Use base16 i.e. hex
 
+(defn parselong [s] (. Long parseLong s))
+(def maxlong (. Long MAX_VALUE))
+
 (defroutes shist-app-routes
   (GET "/" req
        {:status 200
@@ -31,7 +34,7 @@
        (let [cmd (Command. (md5 (str (:host params) (:ts params)))
                            (:cmd params)
                            (:host params)
-                           (:ts params)
+                           (parselong (:ts params))
                            (:tty params)
                            (:owner params))]
          (ds/save! cmd)
@@ -42,10 +45,16 @@
          ))
 
   ;; List all commands
-  (GET "/commands/" []
-       (let [cmds (ds/query :kind Command)]
+  (GET "/commands/" [& params]
+       (let [mints (if (nil? (:mints params)) 0 (parselong (:mints params)))
+             maxts (if (nil? (:maxts params)) maxlong (parselong (:maxts params)))
+             cmds (ds/query :kind Command :filter
+                            [
+                             (>= :timestamp mints)
+                             (<= :timestamp maxts)
+                            ])]
          (json/generate-string cmds)))
-
+  
   ;; List one command
   (GET "/command/:cmdid" [cmdid]
        (let [cmd (ds/retrieve Command cmdid)]

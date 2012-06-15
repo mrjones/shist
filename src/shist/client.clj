@@ -8,8 +8,8 @@
 (defn serverstr [target path]
   (str "http://" (:hostname target) ":" (:port target) path))
 
-(defn listcommands [target]
-  (http/get (serverstr target "/commands/")))
+(defn listcommands [target filter]
+  (http/get (serverstr target (str "/commands/" filter))))
 
 (defn getcommand [target md5]
   (http/get (serverstr target (str "/command/" md5))))
