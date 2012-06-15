@@ -4,7 +4,7 @@ FIXME: write description
 
 ## Usage
 
-# REPL
+# REPL (server)
 lein repl
 (require '[appengine-magic.core :as ae])
 (require '[shist.core :as app])
@@ -16,6 +16,10 @@ p
 ;; To stop / start
 (ae/stop)
 (ae/serve app/shist-app :port 8081)
+
+# Client
+(require '[shist.client :as client])
+
 
 ;; Useful for debugging
 (require '[appengine-magic.services.datastore :as ds])

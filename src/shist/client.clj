@@ -1,4 +1,6 @@
-(ns shist.client)
+(ns shist.client
+  (:require [clj-http.client :as http]))
 
-(defn speak []
-  (println "hi"))
+(defn hitroot []
+  (http/get "http://localhost:8081"))
+  
