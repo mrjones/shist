@@ -7,7 +7,7 @@
             [appengine-magic.services.datastore :as ds]
             [clj-json.core :as json]))
 
-(ds/defentity Command [ ^:key id, command, hostname, timestamp ])
+(ds/defentity Command [ ^:key id, command, hostname, timestamp, tty, owner ])
 
 (defn md5
   "Generate a md5 checksum for the given string"
@@ -31,7 +31,9 @@
        (let [cmd (Command. (md5 (str (:host params) (:ts params)))
                            (:cmd params)
                            (:host params)
-                           (:ts params))]
+                           (:ts params)
+                           (:tty params)
+                           (:owner params))]
          (ds/save! cmd)
          (str "Timestamp: " (:timestamp cmd)
               " host: " (:hostname cmd)

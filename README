@@ -19,6 +19,9 @@ p
 
 # Client
 (require '[shist.client :as client])
+(client/addcommand client/localserver "mrjon.es" 1234567890 "tty0" "cat hi" "mrjones")
+(client/getcommand client/localserver <returned id>)
+(client/listcommands)
 
 
 ;; Useful for debugging
