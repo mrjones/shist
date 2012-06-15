@@ -9,7 +9,7 @@ lein repl
 (require '[appengine-magic.core :as ae])
 (require '[shist.core :as app])
 (ae/serve app/shist-app :port 8081)
-p
+
 ;; Compile in new changes (no need to restart server)
 (compile 'shist.core)
 
@@ -33,3 +33,7 @@ lein deps
 lein appengine-prepare
 path/to/appengine-java-sdk/bin/dev_appserver.sh war 
 
+# Bash settings
+shopt -s histappend  # Appends to bash history, rather than overwriting
+export HISTTIMEFORMAT='%s ' # Keep timestamps in .bash_history
+export PROMPT_COMMAND="history -a"  # write every command to history immediately
