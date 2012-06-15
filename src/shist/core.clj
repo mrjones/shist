@@ -1,6 +1,7 @@
 (ns shist.core
   (:import [java.security MessageDigest])
   (:use compojure.core
+        [clojure.contrib.string :only [substring?]]
         [ring.middleware.params :only [wrap-params]]
         [ring.middleware.keyword-params :only [wrap-keyword-params]])
   (:require [appengine-magic.core :as ae]
@@ -48,12 +49,12 @@
   (GET "/commands/" [& params]
        (let [mints (if (nil? (:mints params)) 0 (parselong (:mints params)))
              maxts (if (nil? (:maxts params)) maxlong (parselong (:maxts params)))
+             cmdfilter (if (nil? (:filter params)) "" (:filter params))
              cmds (ds/query :kind Command :filter
-                            [
-                             (>= :timestamp mints)
-                             (<= :timestamp maxts)
-                            ])]
-         (json/generate-string cmds)))
+                            [(>= :timestamp mints) (<= :timestamp maxts)])
+             filtercmds (filter #(substring? cmdfilter (:command %)) cmds)
+             ]
+         (str cmdfilter "->" (json/generate-string filtercmds))))
   
   ;; List one command
   (GET "/command/:cmdid" [cmdid]
