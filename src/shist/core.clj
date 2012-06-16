@@ -3,6 +3,7 @@
            [org.apache.commons.codec.binary Hex])
   (:use compojure.core
         hiccup.core
+        shist.signatures
         [clojure.contrib.string :only [substring?]]
         [clojure.contrib.math :only [abs]]
         [ring.middleware.params :only [wrap-params]]
@@ -16,28 +17,6 @@
 
 (ds/defentity ApiKey [ ^:key key, owner ])
 
-(def key-alphabet "abcdefghijklmnopqrstuvwxyz0123456789")
-(def key-length 25)
-
-(def random (java.security.SecureRandom.))
-
-(defn rand-char [chars]
-  (let [len (.length chars)
-        rand (abs (.nextInt random))]
-    (.charAt chars (rem rand len))
-    ))
-
-(defn rand-chars [accum n valid-chars]
-  (if (= n 0)
-    accum
-    (rand-chars (str accum (rand-char valid-chars)) (- n 1) valid-chars)))
-
-(defn gen-key []
-  ; TODO(mrjones): replace with
-  ; KeyGenerator kg = KeyGenerator.getInstance("HmacMD5");
-  ; SecretKey sk = kg.generateKey();
-  (rand-chars "" key-length key-alphabet))
-
 (defn md5
   "Generate a md5 checksum for the given string"
   [token]
@@ -48,11 +27,6 @@
     (.toString
      (new java.math.BigInteger 1 (.digest hash-bytes)) ; Positive and the size of the number
               16))) ; Use base16 i.e. hex
-
-(defn hmac [msg key]
-  (let [keyspec (javax.crypto.spec.SecretKeySpec. (.getBytes key "UTF8") "HmacMD5")
-        mac (doto (javax.crypto.Mac/getInstance "HmacMD5") (.init keyspec))]
-    (Hex/encodeHexString (.doFinal mac (.getBytes msg "UTF8")))))
 
 (defn manage-keys-ui []
   (html
@@ -107,25 +81,33 @@
 
   ;; Non-REST interactive (key-management) UI
   
-  (GET "/manage_keys*", []
+  (GET "/manage_keys*" []
        (if (user/user-logged-in?)
          (manage-keys-ui)
          {:status 302
           :headers {"Location" (user/login-url :destination "/manage_keys")}
           :body ""}))
 
-  (GET "/add_key", []
+  (GET "/add_key" []
        (let [key (ApiKey. (gen-key) (user/current-user))]
          (ds/save! key)
          {:status 302
           :headers {"Location" "/manage_keys"}
           :body ""}))
 
-  (GET "/logout", []
+  (GET "/logout" []
        {:status 302
         :headers {"Location" (user/logout-url)}
         :body ""})
 
+  (GET "/test" [& params]
+       (let [their-signature (:signature params)
+             signable (dissoc params :signature)
+             our-signature (sign "12345" "GET" "/test" signable "")]
+         (if (= their-signature our-signature)
+           "AUTHORIZED"
+           (str "UNAUTHORIZED. " our-signature " != " their-signature))))
+        
   ;; Chrome always asks for a favicon. This suppresses error traces
   (GET "/favicon.ico" [] { :status 404 })
 

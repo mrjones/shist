@@ -1,4 +1,5 @@
 (ns shist.client
+  (:use shist.signatures)
   (:require [clj-http.client :as http]))
 
 (def local "http://localhost:8081")
@@ -6,7 +7,14 @@
 (def appengine-https "https://shellhistory.appspot.com/")
 
 (defn listcommands [target filter]
-  (http/get (str target (str "/commands/" filter))))
+  (http/get (str target "/commands/" filter)))
+
+(defn signed-get [host path param-map key]
+  (let [hmac (sign key "GET" path param-map "")
+        signed-param-map (assoc param-map :signature hmac)]
+    (println (str host path "?" (http/generate-query-string signed-param-map)))
+    (http/get (str host path "?" (http/generate-query-string signed-param-map)))))
+    
 
 (defn getcommand [target md5]
   (http/get (str target "/command/" md5)))
