@@ -4,15 +4,15 @@
   (:use compojure.core
         hiccup.core
         shist.signatures
-        [clojure.contrib.string :only [substring?]]
-        [clojure.contrib.math :only [abs]]
-        [clojure.string :only [upper-case]]
         [ring.middleware.params :only [wrap-params]]
         [ring.middleware.keyword-params :only [wrap-keyword-params]])
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.datastore :as ds]
             [appengine-magic.services.user :as user]
-            [clj-json.core :as json]))
+            [clj-json.core :as json]
+            [clojure.string :as str]
+            [clojure.contrib.string :as cstr]
+            ))
 
 (ds/defentity Command [ ^:key id, command, hostname, timestamp, tty, owner ])
 
@@ -41,6 +41,14 @@
 (defn parselong [s] (. Long parseLong s))
 (def maxlong (. Long MAX_VALUE))
 
+(defn unauthorized [request params]
+  {:status 403
+   :body (str "403 Unauthorized.\nString to sign: " (signable-string (:request-method request) (:uri request) params))})
+
+(defn unauthorized2 [method path params]
+  {:status 403
+   :body (str "Unauthorized.\nString to sign: " (signable-string method path params))})
+
 (defroutes shist-app-routes
   (GET "/" req
        {:status 200
@@ -63,22 +71,26 @@
          ))
 
   ;; List all commands
-  (GET "/commands/" [& params]
+  (GET "/commands/" [:as request & params]
        (let [mints (if (nil? (:mints params)) 0 (parselong (:mints params)))
              maxts (if (nil? (:maxts params)) maxlong (parselong (:maxts params)))
              cmdfilter (if (nil? (:filter params)) "" (:filter params))
              cmds (ds/query :kind Command :filter
                             [(>= :timestamp mints) (<= :timestamp maxts)])
-             filtercmds (filter #(substring? cmdfilter (:command %)) cmds)
+             filtercmds (filter #(cstr/substring? cmdfilter (:command %)) cmds)
              ]
-         (json/generate-string filtercmds)))
+         (if (:signature-valid params)
+           (json/generate-string filtercmds)
+           (unauthorized request params))))
   
   ;; List one command
-  (GET "/command/:cmdid" [cmdid]
-       (let [cmd (ds/retrieve Command cmdid)]
-         (if (nil? cmd)
-           {:status 404 :body (str cmdid " not found sir.")}
-           {:status 200 :body (json/generate-string cmd)})))
+  (GET "/command/:cmdid" [cmdid :as request & params]
+       (if (:signature-valid params)
+         (let [cmd (ds/retrieve Command cmdid)]
+           (if (nil? cmd)
+             {:status 404 :body (str cmdid " not found sir.")}
+             {:status 200 :body (json/generate-string cmd)}))
+         (unauthorized request params))) 
 
   ;; Non-REST interactive (key-management) UI
   
@@ -117,7 +129,7 @@
   (fn [request]
     (let [key "12345"
           their-signature (:signature (:params request))
-          method (upper-case (name (:request-method request)))
+          method (:request-method request)
           signable-params (dissoc (:params request) :signature)
           our-signature (sign key method (:uri request) signable-params)
           signature-valid (= their-signature our-signature)

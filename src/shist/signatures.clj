@@ -1,7 +1,7 @@
 (ns shist.signatures
   (:import [org.apache.commons.codec.binary Hex])
-  (:use [clojure.contrib.math :only [abs]])
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.contrib.math :as math]))
 
 
 (def random (java.security.SecureRandom.))
@@ -11,7 +11,7 @@
 
 (defn rand-char [chars]
   (let [len (.length chars)
-        rand (abs (.nextInt random))]
+        rand (math/abs (.nextInt random))]
     (.charAt chars (rem rand len))
     ))
 
@@ -35,6 +35,10 @@
 (defn canonicalize [params]
   (str/join "&" (map #(str (name %1) "=" (%1 params)) (sort (keys params)))))
 
+(defn signable-string [method path params]
+  (str (str/upper-case (name method)) "\n" path "\n"
+       (canonicalize (dissoc params :signature :signature-valid))))
+
 (defn sign [key method path params]
-  (let [signable (str method "\n" path "\n" (canonicalize params))]
+  (let [signable (signable-string method path params)]
     (hmac key signable)))
