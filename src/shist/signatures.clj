@@ -31,9 +31,10 @@
         mac (doto (javax.crypto.Mac/getInstance "HmacMD5") (.init keyspec))]
     (Hex/encodeHexString (.doFinal mac (.getBytes msg "UTF8")))))
 
+; No URL Encoding
 (defn canonicalize [params]
   (str/join "&" (map #(str (name %1) "=" (%1 params)) (sort (keys params)))))
 
-(defn sign [key method path params body]
-  (let [signable (str method "\n" path "?" (canonicalize params) "\n" body)]
+(defn sign [key method path params]
+  (let [signable (str method "\n" path "\n" (canonicalize params))]
     (hmac key signable)))

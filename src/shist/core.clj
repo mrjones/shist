@@ -101,13 +101,10 @@
         :headers {"Location" (user/logout-url)}
         :body ""})
 
-  (GET "/test" [& params]
-       (let [their-signature (:signature params)
-             signable (dissoc params :signature)
-             our-signature (sign "12345" "GET" "/test" signable "")]
-         (if (or (:signature-valid params) (= their-signature our-signature))
-           (str "verified? [" (:signature-valid params) "] -> AUTHORIZED")
-           (str "UNAUTHORIZED. " our-signature " != " their-signature))))
+  (ANY "/test" [& params]
+       (if (:signature-valid params)
+         (str "verified? [" (:signature-valid params) "] -> AUTHORIZED")
+         (str "UNAUTHORIZED.")))
         
   ;; Chrome always asks for a favicon. This suppresses error traces
   (GET "/favicon.ico" [] { :status 404 })
@@ -118,12 +115,14 @@
 
 (defn wrap-check-signature [handler]
   (fn [request]
-    (let [their-signature (:signature (:params request))
+    (let [key "12345"
+          their-signature (:signature (:params request))
           method (upper-case (name (:request-method request)))
           signable-params (dissoc (:params request) :signature)
-          our-signature (sign "12345" method (:uri request) signable-params "")
+          our-signature (sign key method (:uri request) signable-params)
           signature-valid (= their-signature our-signature)
           new-params (assoc (:params request) :signature-valid signature-valid)]
+      (print request)
       (handler (assoc request :params new-params)))))
 
 ; Right now you need to make sure the header:
