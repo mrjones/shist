@@ -6,6 +6,7 @@
         shist.signatures
         [clojure.contrib.string :only [substring?]]
         [clojure.contrib.math :only [abs]]
+        [clojure.string :only [upper-case]]
         [ring.middleware.params :only [wrap-params]]
         [ring.middleware.keyword-params :only [wrap-keyword-params]])
   (:require [appengine-magic.core :as ae]
@@ -104,8 +105,8 @@
        (let [their-signature (:signature params)
              signable (dissoc params :signature)
              our-signature (sign "12345" "GET" "/test" signable "")]
-         (if (= their-signature our-signature)
-           "AUTHORIZED"
+         (if (or (:signature-valid params) (= their-signature our-signature))
+           (str "verified? [" (:signature-valid params) "] -> AUTHORIZED")
            (str "UNAUTHORIZED. " our-signature " != " their-signature))))
         
   ;; Chrome always asks for a favicon. This suppresses error traces
@@ -115,6 +116,15 @@
 
   )
 
+(defn wrap-check-signature [handler]
+  (fn [request]
+    (let [their-signature (:signature (:params request))
+          method (upper-case (name (:request-method request)))
+          signable-params (dissoc (:params request) :signature)
+          our-signature (sign "12345" method (:uri request) signable-params "")
+          signature-valid (= their-signature our-signature)
+          new-params (assoc (:params request) :signature-valid signature-valid)]
+      (handler (assoc request :params new-params)))))
 
 ; Right now you need to make sure the header:
 ; Content-Type:application/x-www-form-urlencoded
@@ -127,6 +137,7 @@
 ; https://github.com/gcv/appengine-magic/issues/28
 (def shist-app-handler
   (-> #'shist-app-routes
+      wrap-check-signature
       wrap-keyword-params
       wrap-params))
 
