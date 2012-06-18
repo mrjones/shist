@@ -36,7 +36,10 @@
   (str/join "&" (map #(str (name %1) "=" (%1 params)) (sort (keys params)))))
 
 (defn signable-string [method path params]
-  (str (str/upper-case (name method)) "\n" path "\n"
+  (str (if (nil? method) "XXX" (str/upper-case (name method)))
+       " "
+       path
+       " "
        (canonicalize (dissoc params :signature :signature-valid))))
 
 (defn sign [key method path params]

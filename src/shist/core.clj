@@ -10,7 +10,6 @@
             [appengine-magic.services.datastore :as ds]
             [appengine-magic.services.user :as user]
             [clj-json.core :as json]
-            [clojure.string :as str]
             [clojure.contrib.string :as cstr]
             ))
 
@@ -43,11 +42,8 @@
 
 (defn unauthorized [request params]
   {:status 403
-   :body (str "403 Unauthorized.\nString to sign: " (signable-string (:request-method request) (:uri request) params))})
-
-(defn unauthorized2 [method path params]
-  {:status 403
-   :body (str "Unauthorized.\nString to sign: " (signable-string method path params))})
+   :body (str "403 Unauthorized.\nString to sign: "
+              (signable-string (:request-method request) (:uri request) params))})
 
 (defroutes shist-app-routes
   (GET "/" req
@@ -56,32 +52,30 @@
         :body "Hello, world! (updated 4)"})
 
   ;; Insert a new command into the archive
-  (POST "/commands/" [& params]
-       (let [cmd (Command. (md5 (str (:host params) (:ts params)))
-                           (:cmd params)
-                           (:host params)
-                           (parselong (:ts params))
-                           (:tty params)
-                           (:owner params))]
-         (ds/save! cmd)
-         (str "Timestamp: " (:timestamp cmd)
-              " host: " (:hostname cmd)
-              " cmd: " (:command cmd)
-              " id: " (:id cmd))
-         ))
-
+  (POST "/commands/" [:as request & params]
+        (if (not (:signature-valid params))
+          (unauthorized request params)
+          (let [cmd (Command. (md5 (str (:host params) (:ts params)))
+                              (:cmd params)
+                              (:host params)
+                              (parselong (:ts params))
+                              (:tty params)
+                              (:owner params))]
+            (ds/save! cmd)
+            "OK")))
+  
   ;; List all commands
   (GET "/commands/" [:as request & params]
-       (let [mints (if (nil? (:mints params)) 0 (parselong (:mints params)))
-             maxts (if (nil? (:maxts params)) maxlong (parselong (:maxts params)))
-             cmdfilter (if (nil? (:filter params)) "" (:filter params))
-             cmds (ds/query :kind Command :filter
-                            [(>= :timestamp mints) (<= :timestamp maxts)])
-             filtercmds (filter #(cstr/substring? cmdfilter (:command %)) cmds)
-             ]
-         (if (:signature-valid params)
-           (json/generate-string filtercmds)
-           (unauthorized request params))))
+       (if (:signature-valid params)
+         (let [mints (if (nil? (:mints params)) 0 (parselong (:mints params)))
+               maxts (if (nil? (:maxts params)) maxlong (parselong (:maxts params)))
+               cmdfilter (if (nil? (:filter params)) "" (:filter params))
+               cmds (ds/query :kind Command :filter
+                              [(>= :timestamp mints) (<= :timestamp maxts)])
+               filtercmds (filter #(cstr/substring? cmdfilter (:command %)) cmds)
+               ]
+           (json/generate-string filtercmds))
+         (unauthorized request params)))
   
   ;; List one command
   (GET "/command/:cmdid" [cmdid :as request & params]
@@ -134,7 +128,6 @@
           our-signature (sign key method (:uri request) signable-params)
           signature-valid (= their-signature our-signature)
           new-params (assoc (:params request) :signature-valid signature-valid)]
-      (print request)
       (handler (assoc request :params new-params)))))
 
 ; Right now you need to make sure the header:
